@@ -29,17 +29,6 @@ def test_fetch_reads_running_config_attribute():
     assert failed == {}
 
 
-def test_fetch_reads_running_config_attribute_with_dash():
-    device = FakeDevice()
-    setattr(device, "running-config", "hostname dash")
-    fetcher = DeviceAttributeFetcher()
-
-    configs, failed = run(fetcher.fetch([device]))
-
-    assert configs == {device: "hostname dash"}
-    assert failed == {}
-
-
 def test_fetch_reads_configured_attribute_name():
     device = FakeDevice()
     device.config = "hostname custom"

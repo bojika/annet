@@ -1,4 +1,3 @@
-from collections.abc import Iterable
 from typing import Any
 
 from annet.connectors import AdapterWithConfig, AdapterWithName
@@ -7,12 +6,8 @@ from annet.storage import Device
 
 
 class DeviceAttributeFetcher(Fetcher, AdapterWithConfig, AdapterWithName):
-    def __init__(self, running_config_attribute: str | Iterable[str] | None = None) -> None:
-        if running_config_attribute is None:
-            running_config_attribute = ("running_config", "running-config")
-        elif isinstance(running_config_attribute, str):
-            running_config_attribute = (running_config_attribute,)
-        self.running_config_attributes = tuple(running_config_attribute)
+    def __init__(self, running_config_attribute: str = "running_config") -> None:
+        self.running_config_attribute = running_config_attribute
 
     @classmethod
     def name(cls) -> str:
@@ -46,7 +41,7 @@ class DeviceAttributeFetcher(Fetcher, AdapterWithConfig, AdapterWithName):
         failed: dict[Device, Exception] = {}
         for device in devices:
             try:
-                configs[device] = self._get_first_device_attribute(device, self.running_config_attributes)
+                configs[device] = self._get_device_attribute(device, self.running_config_attribute)
             except Exception as exc:  # pylint: disable=broad-except
                 failed[device] = exc
         return configs, failed
@@ -77,13 +72,3 @@ class DeviceAttributeFetcher(Fetcher, AdapterWithConfig, AdapterWithName):
         if not isinstance(value, str):
             raise TypeError(f"Device attribute {name!r} must be str, got {type(value).__name__}")
         return value
-
-    @classmethod
-    def _get_first_device_attribute(cls, device: Device, names: Iterable[str]) -> str:
-        missing = []
-        for name in names:
-            try:
-                return cls._get_device_attribute(device, name)
-            except AttributeError:
-                missing.append(name)
-        raise AttributeError(f"Device has none of the config attributes: {', '.join(repr(name) for name in missing)}")

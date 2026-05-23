@@ -42,6 +42,9 @@ if __name__ == "__main__":
             "annet.connectors.storage": [
                 "file = annet.adapters.file.provider:Provider",
             ],
+            "annet.connectors.fetcher": [
+                "device_attribute = annet.adapters.fetchers.device_attribute.fetcher:DeviceAttributeFetcher",
+            ],
         },
         extras_require={
             "netbox": [

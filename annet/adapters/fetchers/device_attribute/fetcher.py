@@ -1,0 +1,74 @@
+from typing import Any
+
+from annet.connectors import AdapterWithConfig, AdapterWithName
+from annet.deploy import Fetcher
+from annet.storage import Device
+
+
+class DeviceAttributeFetcher(Fetcher, AdapterWithConfig, AdapterWithName):
+    def __init__(self, running_config_attribute: str = "running_config") -> None:
+        self.running_config_attribute = running_config_attribute
+
+    @classmethod
+    def name(cls) -> str:
+        return "device_attribute"
+
+    @classmethod
+    def with_config(cls, **kwargs: dict[str, Any]) -> Fetcher:
+        return cls(**kwargs)
+
+    async def fetch_packages(
+        self,
+        devices: list[Device],
+        processes: int = 1,
+        max_slots: int = 0,
+    ) -> tuple[dict[Device, str], dict[Device, Any]]:
+        return {}, {}
+
+    async def fetch(
+        self,
+        devices: list[Device],
+        files_to_download: dict[Device, list[str]] | None = None,
+        processes: int = 1,
+        max_slots: int = 0,
+    ):
+        if files_to_download is not None:
+            return self._fetch_files(devices, files_to_download)
+        return self._fetch_running_config(devices)
+
+    def _fetch_running_config(self, devices: list[Device]) -> tuple[dict[Device, str], dict[Device, Exception]]:
+        configs: dict[Device, str] = {}
+        failed: dict[Device, Exception] = {}
+        for device in devices:
+            try:
+                configs[device] = self._get_device_attribute(device, self.running_config_attribute)
+            except Exception as exc:  # pylint: disable=broad-except
+                failed[device] = exc
+        return configs, failed
+
+    def _fetch_files(
+        self,
+        devices: list[Device],
+        files_to_download: dict[Device, list[str]],
+    ) -> tuple[dict[Device, dict[str, str | None]], dict[Device, Exception]]:
+        files: dict[Device, dict[str, str | None]] = {}
+        failed: dict[Device, Exception] = {}
+        for device in devices:
+            try:
+                device_files = {}
+                for path in files_to_download.get(device, []):
+                    try:
+                        device_files[path] = self._get_device_attribute(device, path)
+                    except AttributeError:
+                        device_files[path] = None
+                files[device] = device_files
+            except Exception as exc:  # pylint: disable=broad-except
+                failed[device] = exc
+        return files, failed
+
+    @staticmethod
+    def _get_device_attribute(device: Device, name: str) -> str:
+        value = getattr(device, name)
+        if not isinstance(value, str):
+            raise TypeError(f"Device attribute {name!r} must be str, got {type(value).__name__}")
+        return value
